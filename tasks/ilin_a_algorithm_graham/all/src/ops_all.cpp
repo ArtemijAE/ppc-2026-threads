@@ -5,7 +5,7 @@
 #include <tbb/parallel_reduce.h>
 #include <tbb/parallel_sort.h>
 
-#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -110,12 +110,12 @@ bool IlinAGrahamALL::RunImpl() {
 
   Point local_p0 = FindLowestLeftmostParallel(points_);
 
-  double local_min[2] = {local_p0.y, local_p0.x};
-  double global_min[2];
+  std::array<double, 2> local_min = {local_p0.y, local_p0.x};
+  std::array<double, 2> global_min = {};
 
-  MPI_Allreduce(local_min, global_min, 2, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(local_min.data(), global_min.data(), 2, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
-  Point global_p0;
+  Point global_p0{};
   global_p0.y = global_min[0];
   global_p0.x = global_min[1];
 
@@ -141,13 +141,13 @@ bool IlinAGrahamALL::RunImpl() {
     total_count += counts[i];
   }
 
-  std::vector<double> send_buffer(local_count * 2);
+  std::vector<double> send_buffer(static_cast<size_t>(local_count) * 2);
   for (int i = 0; i < local_count; ++i) {
-    send_buffer[i * 2] = sorted[i].x;
-    send_buffer[i * 2 + 1] = sorted[i].y;
+    send_buffer[static_cast<size_t>(i) * 2] = sorted[i].x;
+    send_buffer[static_cast<size_t>(i) * 2 + 1] = sorted[i].y;
   }
 
-  std::vector<double> recv_buffer(total_count * 2);
+  std::vector<double> recv_buffer(static_cast<size_t>(total_count) * 2);
   std::vector<int> recv_counts(size);
   std::vector<int> recv_displs(size);
 
@@ -160,9 +160,10 @@ bool IlinAGrahamALL::RunImpl() {
                  recv_displs.data(), MPI_DOUBLE, MPI_COMM_WORLD);
 
   std::vector<Point> global_sorted;
-  global_sorted.reserve(total_count);
+  global_sorted.reserve(static_cast<size_t>(total_count));
   for (int i = 0; i < total_count; ++i) {
-    global_sorted.push_back({recv_buffer[i * 2], recv_buffer[i * 2 + 1]});
+    size_t idx = static_cast<size_t>(i) * 2;
+    global_sorted.push_back({recv_buffer[idx], recv_buffer[idx + 1]});
   }
 
   tbb::parallel_sort(global_sorted.begin(), global_sorted.end(), PointComparator(global_p0));
