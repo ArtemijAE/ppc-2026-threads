@@ -1,7 +1,0 @@
-{
-  "tasks": {
-    "mpi": "enabled",
-    "seq": "disabled"
-  },
-  "tasks_type": "processes"
-}
