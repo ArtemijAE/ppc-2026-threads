@@ -143,8 +143,8 @@ bool IlinAGrahamALL::RunImpl() {
 
   std::vector<double> send_buffer(static_cast<size_t>(local_count) * 2);
   for (int i = 0; i < local_count; ++i) {
-    send_buffer[static_cast<size_t>(i) * 2] = sorted[i].x;
-    send_buffer[static_cast<size_t>(i) * 2 + 1] = sorted[i].y;
+    send_buffer[(static_cast<size_t>(i) * 2)] = sorted[i].x;
+    send_buffer[(static_cast<size_t>(i) * 2) + 1] = sorted[i].y;
   }
 
   std::vector<double> recv_buffer(static_cast<size_t>(total_count) * 2);
@@ -162,7 +162,7 @@ bool IlinAGrahamALL::RunImpl() {
   std::vector<Point> global_sorted;
   global_sorted.reserve(static_cast<size_t>(total_count));
   for (int i = 0; i < total_count; ++i) {
-    size_t idx = static_cast<size_t>(i) * 2;
+    size_t idx = (static_cast<size_t>(i) * 2);
     global_sorted.push_back({recv_buffer[idx], recv_buffer[idx + 1]});
   }
 
