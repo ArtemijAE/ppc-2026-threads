@@ -59,6 +59,10 @@ class PointComparator {
 };
 
 void GrahamScan(const std::vector<Point> &sorted, const Point &p0, std::vector<Point> &hull) {
+  if (sorted.empty()) {
+    hull.push_back(p0);
+    return;
+  }
   hull.reserve(sorted.size() + 1);
   hull.push_back(p0);
   hull.push_back(sorted[0]);
@@ -104,10 +108,16 @@ bool IlinAGrahamALL::RunImpl() {
     return true;
   }
 
-  Point p0 = FindLowestLeftmostParallel(points_);
+  Point local_p0 = FindLowestLeftmostParallel(points_);
 
-  Point global_p0 = p0;
-  MPI_Allreduce(&p0, &global_p0, sizeof(Point) / sizeof(double), MPI_DOUBLE, MPI_MINLOC, MPI_COMM_WORLD);
+  double local_min[2] = {local_p0.y, local_p0.x};
+  double global_min[2];
+
+  MPI_Allreduce(local_min, global_min, 2, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+
+  Point global_p0;
+  global_p0.y = global_min[0];
+  global_p0.x = global_min[1];
 
   std::vector<Point> sorted;
   sorted.reserve(points_.size());
@@ -131,30 +141,36 @@ bool IlinAGrahamALL::RunImpl() {
     total_count += counts[i];
   }
 
-  std::vector<Point> all_points(total_count);
-  MPI_Allgatherv(sorted.data(), local_count, MPI_BYTE, all_points.data(), counts.data(), displs.data(), MPI_BYTE,
-                 MPI_COMM_WORLD);
+  std::vector<double> send_buffer(local_count * 2);
+  for (int i = 0; i < local_count; ++i) {
+    send_buffer[i * 2] = sorted[i].x;
+    send_buffer[i * 2 + 1] = sorted[i].y;
+  }
+
+  std::vector<double> recv_buffer(total_count * 2);
+  std::vector<int> recv_counts(size);
+  std::vector<int> recv_displs(size);
+
+  for (int i = 0; i < size; ++i) {
+    recv_counts[i] = counts[i] * 2;
+    recv_displs[i] = displs[i] * 2;
+  }
+
+  MPI_Allgatherv(send_buffer.data(), local_count * 2, MPI_DOUBLE, recv_buffer.data(), recv_counts.data(),
+                 recv_displs.data(), MPI_DOUBLE, MPI_COMM_WORLD);
 
   std::vector<Point> global_sorted;
   global_sorted.reserve(total_count);
-
-  PointComparator cmp(global_p0);
-  for (int i = 0; i < size; ++i) {
-    for (int j = 0; j < counts[i]; ++j) {
-      global_sorted.push_back(all_points[displs[i] + j]);
-    }
+  for (int i = 0; i < total_count; ++i) {
+    global_sorted.push_back({recv_buffer[i * 2], recv_buffer[i * 2 + 1]});
   }
 
-  tbb::parallel_sort(global_sorted.begin(), global_sorted.end(), cmp);
+  tbb::parallel_sort(global_sorted.begin(), global_sorted.end(), PointComparator(global_p0));
 
   std::vector<Point> hull;
   GrahamScan(global_sorted, global_p0, hull);
 
-  if (rank == 0) {
-    hull_ = std::move(hull);
-  }
-
-  MPI_Bcast(&hull_, sizeof(hull_), MPI_BYTE, 0, MPI_COMM_WORLD);
+  hull_ = std::move(hull);
 
   return true;
 }

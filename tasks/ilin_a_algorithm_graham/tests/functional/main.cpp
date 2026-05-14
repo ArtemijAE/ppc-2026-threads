@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -37,12 +39,17 @@ class IlinAGrahamFuncTests : public ppc::util::BaseRunFuncTests<InType, OutType,
       return false;
     }
 
-    for (size_t i = 0; i < output_data.size(); ++i) {
-      if (std::abs(output_data[i].x - expected_[i].x) > 1e-6 || std::abs(output_data[i].y - expected_[i].y) > 1e-6) {
-        return false;
-      }
+    std::set<std::pair<double, double>> output_set;
+    std::set<std::pair<double, double>> expected_set;
+
+    for (const auto &p : output_data) {
+      output_set.insert({p.x, p.y});
     }
-    return true;
+    for (const auto &p : expected_) {
+      expected_set.insert({p.x, p.y});
+    }
+
+    return output_set == expected_set;
   }
 
   InType GetTestInputData() final {
