@@ -1,6 +1,6 @@
 {
-    "tasks":  {
-                  "seq":  "disabled"
-              },
-    "tasks_type":  "processes"
+  "tasks": {
+    "seq": "disabled"
+  },
+  "tasks_type": "processes"
 }
