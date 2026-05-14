@@ -1,6 +1,6 @@
 {
-  "tasks": {
-    "seq": "enabled"
-  },
-  "tasks_type": "threads"
+    "tasks":  {
+                  "seq":  "disabled"
+              },
+    "tasks_type":  "threads"
 }
