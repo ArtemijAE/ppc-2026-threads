@@ -57,11 +57,8 @@ const auto kAllPerfTasks =
                    ppc::util::MakeAllPerfTasks<InType, IlinAGrahamALL>(PPC_SETTINGS_ilin_a_algorithm_graham));
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
-
 const auto kPerfTestName = IlinAGrahamPerfTests::CustomPerfTestName;
-
 INSTANTIATE_TEST_SUITE_P(RunModeTests, IlinAGrahamPerfTests, kGtestValues, kPerfTestName);
 
 }  // namespace
-
 }  // namespace ilin_a_algorithm_graham
